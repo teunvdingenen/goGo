@@ -101,27 +101,27 @@ func add(s string) {
 
 	switch sSlice[0] {
 	case "protocol_version":
-        arg[0] = 6
+		arg[0] = 6
 	case "name":
-        arg[0] = 7
+		arg[0] = 7
 	case "version":
-        arg[0] = 8
+		arg[0] = 8
 	case "list_commands":
-        arg[0] = 9
+		arg[0] = 9
 	case "quit":
 		arg[0] = 5
 	case "clear_board":
 		arg[0] = 4
 	case "known_commands":
-        arg[0] = 10
-        known := 0
+		arg[0] = 10
+		known := 0
 		for _, v := range commands {
 			if strings.EqualFold(sSlice[1], v) {
-                known = 1
+				known = 1
 				break
 			}
 		}
-        arg[1] = uint8(known)
+		arg[1] = uint8(known)
 	case "genmove":
 		arg[0] = 1
 		arg[1] = FromColorStr(sSlice[1])
@@ -140,7 +140,7 @@ func add(s string) {
 		arg[1] = FromColorStr(sSlice[1])
 		arg[2], arg[3] = ToXY(sSlice[2])
 	default:
-        arg[0] = 255
+		arg[0] = 255
 	}
 	received <- arg
 }
@@ -161,6 +161,6 @@ func Respond(s string, succes bool) {
 	fmt.Printf("%c %s\n\n", b, s)
 }
 
-func ListCommands( ) string {
-    return strings.Join(commands, "\n")
+func ListCommands() string {
+	return strings.Join(commands, "\n")
 }

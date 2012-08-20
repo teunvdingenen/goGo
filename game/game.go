@@ -41,22 +41,22 @@ func watchTodo() {
 			//TODO make quit function
 			running = false
 			gtp.Respond("", true)
-        case 6: //protocol
-            gtp.Respond("2.0", true)
-        case 7: //name
-            gtp.Respond("goGo",  true)
-        case 8: //version
-            gtp.Respond("0.1", true)
-        case 9: //list_commands
-            gtp.Respond(gtp.ListCommands( ), true )
-        case 10: //known_commands
-            if c[1] == 0 {
-                gtp.Respond("false", true)
-            } else {
-                gtp.Respond("true", true)
-            }
+		case 6: //protocol
+			gtp.Respond("2.0", true)
+		case 7: //name
+			gtp.Respond("goGo", true)
+		case 8: //version
+			gtp.Respond("0.1", true)
+		case 9: //list_commands
+			gtp.Respond(gtp.ListCommands(), true)
+		case 10: //known_commands
+			if c[1] == 0 {
+				gtp.Respond("false", true)
+			} else {
+				gtp.Respond("true", true)
+			}
 		default:
-            gtp.Respond("unknown command", false)
+			gtp.Respond("unknown command", false)
 		}
 	}
 }
@@ -64,4 +64,3 @@ func watchTodo() {
 func initBoard(size uint16) {
 	board = Board{make([]uint8, size*size), uint8(size)}
 }
-
