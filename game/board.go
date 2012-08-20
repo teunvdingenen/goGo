@@ -11,7 +11,7 @@ type Board struct {
 
 func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
 	if board.isTesuki(color, x, y) {
-		return 0, "Illigal Move"
+		return 0, "Illegal Move"
 	}
 	board.place(color, x, y)
 	score = board.searchKills(color, x, y)
@@ -32,11 +32,11 @@ func (b *Board) isTesuki(c, x, y uint8) bool {
 	legalCheck.place(c, x, y)
 	xs := []uint8{x}
 	ys := []uint8{y}
-	_ = legalCheck.getGroup(c, 0, xs, ys)
+	_ = legalCheck.GetGroup(c, 0, xs, ys)
 	return !legalCheck.hasFreedom(0, xs, ys)
 }
 
-func (b *Board) isEqual(c *Board) bool {
+func (b *Board) IsEqual(c Board) bool {
 	for i, v := range b.s {
 		if v != c.s[i] {
 			return false
@@ -87,33 +87,33 @@ func (b *Board) GetEmpty() (empty []uint8) {
 	return empty
 }
 
-func (b *Board) getGroup(c, i uint8, xs, ys []uint8) bool {
+func (b *Board) GetGroup(c, i uint8, xs, ys []uint8) bool {
 	xa, xb, ya, yb := getAdjecent(xs[i], ys[i])
 
-	if xa < b.size && b.getColor(xa, ys[i]) == c && !isPresentinGroup(xa, ys[i], xs, ys) {
+	if xa < b.size && b.getColor(xa, ys[i]) == c && !IsPresentinGroup(xa, ys[i], xs, ys) {
 		xs = append(xs, xa)
 		ys = append(ys, ys[i])
 	}
-	if xb < b.size && b.getColor(xb, ys[i]) == c && !isPresentinGroup(xb, ys[i], xs, ys) {
+	if xb < b.size && b.getColor(xb, ys[i]) == c && !IsPresentinGroup(xb, ys[i], xs, ys) {
 		xs = append(xs, xb)
 		ys = append(ys, ys[i])
 	}
-	if ya < b.size && b.getColor(xs[i], ya) == c && !isPresentinGroup(xs[i], ya, xs, ys) {
+	if ya < b.size && b.getColor(xs[i], ya) == c && !IsPresentinGroup(xs[i], ya, xs, ys) {
 		xs = append(xs, xs[i])
 		ys = append(ys, ya)
 	}
-	if yb < b.size && b.getColor(xs[i], yb) == c && !isPresentinGroup(xs[i], yb, xs, ys) {
+	if yb < b.size && b.getColor(xs[i], yb) == c && !IsPresentinGroup(xs[i], yb, xs, ys) {
 		xs = append(xs, xs[i])
 		ys = append(ys, yb)
 	}
-	i += 1
 	if len(xs) == int(i) {
 		return true
 	}
-	return b.getGroup(c, i, xs, ys)
+	i += 1
+	return b.GetGroup(c, i, xs, ys)
 }
 
-func isPresentinGroup(x, y uint8, xs, ys []uint8) bool {
+func IsPresentinGroup(x, y uint8, xs, ys []uint8) bool {
 	for i := 0; i < len(xs); i++ {
 		if xs[i] == x && ys[i] == y {
 			return true
@@ -141,7 +141,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
 	if xa < b.size && b.getColor(xa, y) == opponent {
 		xs := []uint8{xa}
 		ys := []uint8{y}
-		_ = b.getGroup(opponent, 0, xs, ys)
+		_ = b.GetGroup(opponent, 0, xs, ys)
 		if !b.hasFreedom(0, xs, ys) {
 			score += b.kill(xs, ys)
 		}
@@ -149,7 +149,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
 	if xb < b.size && b.getColor(xb, y) == opponent {
 		xs := []uint8{xb}
 		ys := []uint8{y}
-		_ = b.getGroup(opponent, 0, xs, ys)
+		_ = b.GetGroup(opponent, 0, xs, ys)
 		if !b.hasFreedom(0, xs, ys) {
 			score += b.kill(xs, ys)
 		}
@@ -157,7 +157,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
 	if ya < b.size && b.getColor(x, ya) == opponent {
 		xs := []uint8{x}
 		ys := []uint8{ya}
-		_ = b.getGroup(opponent, 0, xs, ys)
+		_ = b.GetGroup(opponent, 0, xs, ys)
 		if !b.hasFreedom(0, xs, ys) {
 			score += b.kill(xs, ys)
 		}
@@ -165,7 +165,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
 	if ya < b.size && b.getColor(x, yb) == opponent {
 		xs := []uint8{x}
 		ys := []uint8{yb}
-		_ = b.getGroup(opponent, 0, xs, ys)
+		_ = b.GetGroup(opponent, 0, xs, ys)
 		if !b.hasFreedom(0, xs, ys) {
 			score += b.kill(xs, ys)
 		}
