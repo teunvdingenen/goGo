@@ -10,13 +10,13 @@ type Board struct {
 }
 
 
-func (b *Board) Play(color, x, y uint8) bool {
-	isLegal := true
-	//TODO check legality (Tesuki, Ko etc.)
+func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
+    if board.isTesuki(color, x, y) {
+        return 0, "Illigal Move"
+    }
 	board.place(color, x, y)
-	//TODO remove dead stones
-	board.prnt()
-	return isLegal
+    score = board.searchKills(color, x, y) 
+	return score, ""
 }
 
 func (b *Board) place(c, x, y uint8) {
@@ -24,6 +24,17 @@ func (b *Board) place(c, x, y uint8) {
 		panic("Invalid board.place operation") //TODO don't panic
 	}
 	b.s[x+y*b.size] = c
+}
+
+func (b *Board) isTesuki(c, x, y uint8) bool {
+    var legalCheck Board
+    copy( legalCheck.s, b.s )
+    legalCheck.size = b.size
+    legalCheck.place( c, x, y )
+    xs := []uint8{x}
+    ys := []uint8{y}
+    _ = legalCheck.getGroup(c, 0, xs, ys)
+    return !legalCheck.hasFreedom(0, xs, ys)
 }
 
 func (b *Board) isEqual( c *Board ) bool {
@@ -63,6 +74,18 @@ func (b *Board) hasFreedom(i uint8, xs, ys []uint8 ) bool {
         return false
     }
     return b.hasFreedom( i, xs, ys )
+}
+
+func (b *Board) GetEmpty( ) (empty []uint8) {
+    for i,v := range b.s {
+        if v == 0 {
+            y := i/int(b.size)
+            x := i%int(b.size)
+            empty = append( empty, uint8(x) )
+            empty = append( empty, uint8(y) )
+        }
+    }
+    return empty
 }
 
 func (b *Board) getGroup(c, i uint8, xs, ys []uint8) bool {
@@ -105,6 +128,57 @@ func (b *Board) getColor(x, y uint8) uint8 {
 		panic("Invalid board.getColor operation") //TODO don't panic
 	}
 	return b.s[x+y*b.size]
+}
+
+func (b* Board) searchKills( color, x, y uint8 ) uint8{
+    var opponent uint8
+    var score uint8 = 0
+    if color == 1 {
+        opponent = 2
+    } else {
+        opponent = 1
+    }
+    xa, xb, ya, yb := getAdjecent(x, y)
+    if xa < b.size && b.getColor(xa, y) == opponent {
+        xs := []uint8{xa}
+        ys := []uint8{y}
+        _ = b.getGroup(opponent, 0, xs, ys)
+        if !b.hasFreedom(0, xs, ys) {
+            score += b.kill(xs, ys)
+        }
+    }
+    if xb < b.size && b.getColor(xb, y) == opponent {
+        xs := []uint8{xb}
+        ys := []uint8{y}
+        _ = b.getGroup(opponent, 0, xs, ys)
+        if !b.hasFreedom(0, xs, ys) {
+            score += b.kill(xs, ys)
+        }
+    }
+    if ya < b.size && b.getColor(x, ya) == opponent {
+        xs := []uint8{x}
+        ys := []uint8{ya}
+        _ = b.getGroup(opponent, 0, xs, ys)
+        if !b.hasFreedom(0, xs, ys) {
+            score += b.kill(xs, ys)
+        }
+    }
+    if ya < b.size && b.getColor(x, yb) == opponent {
+        xs := []uint8{x}
+        ys := []uint8{yb}
+        _ = b.getGroup(opponent, 0, xs, ys)
+        if !b.hasFreedom(0, xs, ys) {
+            score += b.kill(xs, ys)
+        }
+    }
+    return score
+}
+
+func (b *Board) kill(xs, ys []uint8 ) uint8 {
+    for i,v := range xs {
+        b.place(0,v,ys[i])
+    }
+    return uint8(len(xs))
 }
 
 func (b *Board) prnt() {

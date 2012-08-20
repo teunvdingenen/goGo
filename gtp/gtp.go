@@ -95,63 +95,54 @@ func ToColorStr(c uint8) string {
 }
 
 func add(s string) {
-	shouldAdd := false
 	arg := make([]uint8, 4)
 	s = strings.Trim(s, "\n")
 	sSlice := strings.Split(s, " ")
 
 	switch sSlice[0] {
-	case commands[0]: //protocol
-		Respond("2.0", true)
-	case commands[1]: //name
-		Respond("goGo", true)
-	case commands[2]: //version
-		Respond("0.1", true)
-	case commands[4]: //list_commands
-		Respond(strings.Join(commands, "\n"), true)
-	case commands[5]: // quit
-		shouldAdd = true
+	case "protocol_version":
+        arg[0] = 6
+	case "name":
+        arg[0] = 7
+	case "version":
+        arg[0] = 8
+	case "list_commands":
+        arg[0] = 9
+	case "quit":
 		arg[0] = 5
-	case commands[7]: // clear_board
-		shouldAdd = true
+	case "clear_board":
 		arg[0] = 4
-	case commands[3]: //known_commands
+	case "known_commands":
+        arg[0] = 10
+        known := 0
 		for _, v := range commands {
 			if strings.EqualFold(sSlice[1], v) {
-				Respond("true", true)
-				return
+                known = 1
+				break
 			}
 		}
-		Respond("false", true)
-	case commands[10]: //genmove
-		shouldAdd = true
+        arg[1] = uint8(known)
+	case "genmove":
 		arg[0] = 1
 		arg[1] = FromColorStr(sSlice[1])
-	case commands[6]: // boardsize
-		shouldAdd = true
+	case "boardsize":
 		size, _ := strconv.ParseUint(sSlice[1], 10, 8)
 		arg[0] = 3
 		arg[1] = uint8(size)
-	case commands[8]: //komi
-		shouldAdd = true
+	case "komi":
 		komi, _ := strconv.ParseFloat(sSlice[1], 32)
 		komi = komi / 0.5 // convert to number of half points
 		komiInt := uint8(komi)
 		arg[0] = 2
 		arg[1] = komiInt
-	case commands[9]: //play
-		shouldAdd = true
+	case "play":
 		arg[0] = 0
 		arg[1] = FromColorStr(sSlice[1])
 		arg[2], arg[3] = ToXY(sSlice[2])
 	default:
-		Respond("unknown command", false)
+        arg[0] = 255
 	}
-	// get command type
-	// settle arguments
-	if shouldAdd {
-		received <- arg
-	}
+	received <- arg
 }
 
 func Start(todo chan []uint8) int {
@@ -168,4 +159,8 @@ func Respond(s string, succes bool) {
 		b = '?'
 	}
 	fmt.Printf("%c %s\n\n", b, s)
+}
+
+func ListCommands( ) string {
+    return strings.Join(commands, "\n")
 }
