@@ -53,7 +53,7 @@ func Listen() {
 	listener := bufio.NewReader(os.Stdin)
 	for {
 		input, _ := listener.ReadBytes('\n')
-		go add(string(input))
+		add(string(input))
 		//        fmt.Printf("Read: %s\n", input )
 	}
 }

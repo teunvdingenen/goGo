@@ -10,11 +10,11 @@ type Board struct {
 }
 
 func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
-	if board.isTesuki(color, x, y) {
+	if b.isTesuki(color, x, y) {
 		return 0, "Illegal Move"
 	}
-	board.place(color, x, y)
-	score = board.searchKills(color, x, y)
+	b.place(color, x, y)
+	score = b.searchKills(color, x, y)
 	return score, ""
 }
 
@@ -32,8 +32,8 @@ func (b *Board) place(c, x, y uint8) {
 
 func (b *Board) isTesuki(c, x, y uint8) bool {
 	var legalCheck Board
+    legalCheck.Create(uint16(b.size))
 	copy(legalCheck.s, b.s)
-	legalCheck.size = b.size
 	legalCheck.place(c, x, y)
 	xs := []uint8{x}
 	ys := []uint8{y}
@@ -111,10 +111,10 @@ func (b *Board) GetGroup(c, i uint8, xs, ys []uint8) bool {
 		xs = append(xs, xs[i])
 		ys = append(ys, yb)
 	}
+	i += 1
 	if len(xs) == int(i) {
 		return true
 	}
-	i += 1
 	return b.GetGroup(c, i, xs, ys)
 }
 
@@ -167,7 +167,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
 			score += b.kill(xs, ys)
 		}
 	}
-	if ya < b.size && b.getColor(x, yb) == opponent {
+	if yb < b.size && b.getColor(x, yb) == opponent {
 		xs := []uint8{x}
 		ys := []uint8{yb}
 		_ = b.GetGroup(opponent, 0, xs, ys)

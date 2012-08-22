@@ -2,10 +2,11 @@ package main
 
 import (
 	"goGo/gtp"
+    "fmt"
+    "time"
 )
 
 var komi float32
-var board Board
 
 var todo chan []uint8
 var running bool = true
@@ -21,16 +22,23 @@ func watchTodo() {
 		c := <-todo
 		switch c[0] {
 		case 0: //play
+            fmt.Printf("Playing: %d, on %d, %d\n", c[1], c[2], c[3])
 			UpdateCurrentVertex(c[1], c[2], c[3])
 			gtp.Respond("", true)
 		case 1: //genmove
+            fmt.Printf("Getting move for: %d\n", c[1])
+            f := func(){ expandGraph = false }
+            time.AfterFunc(10*time.Second, f)
+            Start()
 			x, y := GetMove(c[1])
+            fmt.Printf("Got move: %d, %d\n", x, y)
 			gtp.Respond(gtp.FromXY(x, y), true)
 		case 2: //komi
 			komi = float32(c[1]) * 0.5
 			gtp.Respond("", true)
 		case 3: //boardsize
 			Initiate(c[1])
+            //Start()
 			gtp.Respond("", true)
 		case 4: //clearboard
 			Reset()

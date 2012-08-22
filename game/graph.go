@@ -7,6 +7,7 @@ import (
 var topVertex *Vertex
 
 var currentVertex *Vertex
+//TODO make channel, shits not working
 var expandGraph bool = false
 
 type Vertex struct {
@@ -31,8 +32,13 @@ type Edge struct {
 }
 
 func Start() {
-	expandGraph = true
-	go createGraph()
+    if expandGraph {
+        Reset()
+        expandGraph = true
+    } else {
+        expandGraph = true
+    }
+	createGraph()
 }
 
 func Stop() {
@@ -48,6 +54,7 @@ func Initiate(boardSize uint8) {
 }
 
 func Reset() {
+    Stop()
 	topVertex = nil
 	currentVertex = nil
 	expandGraph = false
@@ -98,6 +105,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	if newCurrent == nil {
 		Stop()
 		newCurrent = new(Vertex)
+        newCurrent.boardState.Create(uint16(currentVertex.boardState.size))
 		copy(newCurrent.boardState.s, currentVertex.boardState.s)
 		score, _ := newCurrent.boardState.Play(c, x, y)
 
@@ -122,7 +130,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	}
 	currentVertex = newCurrent
 	if !expandGraph {
-		Start()
+		//Start()
 	}
 }
 
@@ -144,13 +152,16 @@ func doRoutine(fromVertex *Vertex, toDepth int) bool {
 	err := "error"
 	for err != "" {
 		x, y = getRandomMove(fromVertex.boardState)
+        newBoard.Create(uint16(currentVertex.boardState.size))
 		copy(newBoard.s, fromVertex.boardState.s)
 		score, err = newBoard.Play(fromVertex.turn, x, y)
 
-		toCompare := fromVertex.inEdge.fromVertex
-		if newBoard.IsEqual(toCompare.boardState) {
-			err = "KO"
-		}
+        if fromVertex.inEdge != nil {
+		    toCompare := fromVertex.inEdge.fromVertex
+		    if newBoard.IsEqual(toCompare.boardState) {
+			    err = "KO"
+		    }
+        }
 	}
 
 	newVertex := new(Vertex)
@@ -256,13 +267,13 @@ func scoreBoard(v *Vertex) (scoreBlack, scoreWhite int) {
 	}
 	if scoreBlack > scoreWhite {
 		vertex := v
-		for vertex != nil {
+		for vertex != topVertex {
 			vertex.blackWins += 1
 			vertex = vertex.inEdge.fromVertex
 		}
 	} else if scoreBlack < scoreWhite {
 		vertex := v
-		for vertex != nil {
+		for vertex != topVertex {
 			vertex.blackWins += 1
 			vertex = vertex.inEdge.fromVertex
 		}
