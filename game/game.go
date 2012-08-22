@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"goGo/gtp"
 )
 
@@ -22,20 +21,19 @@ func watchTodo() {
 		c := <-todo
 		switch c[0] {
 		case 0: //play
-			board.Play(c[1], c[2], c[3])
+			UpdateCurrentVertex(c[1], c[2], c[3])
 			gtp.Respond("", true)
 		case 1: //genmove
-			fmt.Printf("Genmove for color: %d\n", c[1])
-			gtp.Respond(gtp.FromXY(0, 0), true)
+			x, y := GetMove(c[1])
+			gtp.Respond(gtp.FromXY(x, y), true)
 		case 2: //komi
 			komi = float32(c[1]) * 0.5
 			gtp.Respond("", true)
 		case 3: //boardsize
-			initBoard(uint16(c[1]))
+			Initiate(c[1])
 			gtp.Respond("", true)
-			board.prnt()
 		case 4: //clearboard
-			//TODO clear board
+			Reset()
 			gtp.Respond("", true)
 		case 5: //quit
 			//TODO make quit function
@@ -59,8 +57,4 @@ func watchTodo() {
 			gtp.Respond("unknown command", false)
 		}
 	}
-}
-
-func initBoard(size uint16) {
-	board = Board{make([]uint8, size*size), uint8(size)}
 }

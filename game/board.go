@@ -18,6 +18,11 @@ func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
 	return score, ""
 }
 
+func (b *Board) Create(size uint16) {
+	b.s = make([]uint8, size*size)
+	b.size = uint8(size)
+}
+
 func (b *Board) place(c, x, y uint8) {
 	if y >= b.size || x >= b.size || c > 2 {
 		panic("Invalid board.place operation") //TODO don't panic

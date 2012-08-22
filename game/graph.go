@@ -4,7 +4,10 @@ import (
 	"math/rand"
 )
 
+var topVertex *Vertex
+
 var currentVertex *Vertex
+var expandGraph bool = false
 
 type Vertex struct {
 	whiteWins  int
@@ -27,8 +30,108 @@ type Edge struct {
 	toVertex   *Vertex
 }
 
-func CreateGraph() {
+func Start() {
+	expandGraph = true
+	go createGraph()
+}
 
+func Stop() {
+	expandGraph = false
+}
+
+func Initiate(boardSize uint8) {
+	topVertex = new(Vertex)
+	topVertex.boardState.Create(uint16(boardSize))
+	topVertex.turn = 1
+	topVertex.plyDepth = 0
+	currentVertex = topVertex
+}
+
+func Reset() {
+	topVertex = nil
+	currentVertex = nil
+	expandGraph = false
+}
+
+func GetMove(c uint8) (x, y uint8) {
+	var bestMove *Edge = nil
+	var mostWins int = 0
+	if c != currentVertex.turn {
+		panic("Trying to getmove for wrong color")
+	}
+	if c == 1 {
+		for _, v := range currentVertex.outEdges {
+			if v.toVertex.blackWins > mostWins {
+				bestMove = v
+				mostWins = v.toVertex.blackWins
+			}
+		}
+	} else if c == 2 {
+		for _, v := range currentVertex.outEdges {
+			if v.toVertex.whiteWins > mostWins {
+				bestMove = v
+				mostWins = v.toVertex.whiteWins
+			}
+		}
+	} else {
+		panic("Unknown color in GetMove(..)")
+	}
+	if bestMove == nil {
+		panic("Unable to get a move from graph")
+	}
+
+	currentVertex.outEdges = []*Edge{bestMove}
+	currentVertex = bestMove.toVertex
+	return bestMove.playX, bestMove.playY
+}
+
+func UpdateCurrentVertex(c, x, y uint8) {
+	if c != currentVertex.turn {
+		panic("Updating graph to wrong color's move")
+	}
+	var newCurrent *Vertex = nil
+	for _, v := range currentVertex.outEdges {
+		if v.playX == x && v.playY == y {
+			newCurrent = v.toVertex
+		}
+	}
+	if newCurrent == nil {
+		Stop()
+		newCurrent = new(Vertex)
+		copy(newCurrent.boardState.s, currentVertex.boardState.s)
+		score, _ := newCurrent.boardState.Play(c, x, y)
+
+		if c == 1 {
+			newCurrent.blackScore += score
+			newCurrent.turn = 2
+		} else {
+			newCurrent.whiteScore += score
+			newCurrent.turn = 1
+		}
+		newCurrent.plyDepth = currentVertex.plyDepth + 1
+
+		newEdge := new(Edge)
+		newEdge.fromVertex = currentVertex
+		newEdge.toVertex = newCurrent
+
+		newEdge.playX = x
+		newEdge.playY = y
+
+		currentVertex.outEdges = []*Edge{newEdge}
+		newCurrent.inEdge = newEdge
+	}
+	currentVertex = newCurrent
+	if !expandGraph {
+		Start()
+	}
+}
+
+func createGraph() {
+	maxMoves := int(currentVertex.boardState.size * currentVertex.boardState.size)
+	for expandGraph {
+		toDepth := maxMoves/2 + currentVertex.plyDepth + 1
+		_ = doRoutine(currentVertex, toDepth)
+	}
 }
 
 func doRoutine(fromVertex *Vertex, toDepth int) bool {
@@ -71,7 +174,7 @@ func doRoutine(fromVertex *Vertex, toDepth int) bool {
 	}
 	newVertex.plyDepth = fromVertex.plyDepth + 1
 
-	if newVertex.plyDepth > 200 {
+	if newVertex.plyDepth > int(newBoard.size*newBoard.size/2) {
 		_, _ = scoreBoard(newVertex)
 	}
 	//continue to new vertex
