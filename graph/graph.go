@@ -2,22 +2,21 @@ package graph
 
 import (
 	"math/rand"
-    "time"
-    "fmt"
+	"time"
 )
 
 var topVertex *Vertex
 var currentVertex *Vertex
 
 type Vertex struct {
-	whiteWins  int
-	blackWins  int
+	whiteWins  uint16
+	blackWins  uint16
 	whiteScore uint8
 	blackScore uint8
 	boardState Board
 	turn       uint8
 
-	plyDepth int
+	plyDepth uint
 	outEdges []*Edge
 	inEdge   *Edge
 }
@@ -31,6 +30,7 @@ type Edge struct {
 }
 
 func Initiate(boardSize uint8) {
+	rand.Seed(time.Now().Unix())
 	topVertex = new(Vertex)
 	topVertex.boardState.Create(uint16(boardSize))
 	topVertex.turn = 1
@@ -44,13 +44,12 @@ func Reset() {
 }
 
 func GetMove(c uint8) (x, y uint8) {
-    createGraph()
+	createGraph()
 	var bestMove *Edge = nil
-	var mostWins int = 0
+	var mostWins uint16 = 0
 	if c != currentVertex.turn {
 		panic("Trying to getmove for wrong color")
 	}
-    fmt.Printf("Looking for move: numbermoves is: %d\n", len(currentVertex.outEdges))
 	if c == 1 {
 		for _, v := range currentVertex.outEdges {
 			if v.toVertex.blackWins > mostWins {
@@ -84,12 +83,12 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	for _, v := range currentVertex.outEdges {
 		if v.playX == x && v.playY == y {
 			newCurrent = v.toVertex
-            break;
+			break
 		}
 	}
 	if newCurrent == nil {
 		newCurrent = new(Vertex)
-        newCurrent.boardState.Create(uint16(currentVertex.boardState.size))
+		newCurrent.boardState.Create(uint16(currentVertex.boardState.size))
 		copy(newCurrent.boardState.s, currentVertex.boardState.s)
 		score, _ := newCurrent.boardState.Play(c, x, y)
 
@@ -116,41 +115,42 @@ func UpdateCurrentVertex(c, x, y uint8) {
 }
 
 func createGraph() {
-	maxMoves := int(currentVertex.boardState.size * currentVertex.boardState.size)
-    doUntil := time.Now().Add(15*time.Second)
+	maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
+	doUntil := time.Now().Add(15 * time.Second)
 	for time.Now().Second() != doUntil.Second() {
 		toDepth := maxMoves/2 + currentVertex.plyDepth + 1
 		_ = doRoutine(currentVertex, toDepth)
 	}
 }
 
-func doRoutine(fromVertex *Vertex, toDepth int) bool {
+func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	if toDepth == fromVertex.plyDepth {
 		return true
 	}
-	var score uint8
-	var x, y uint8
-	var newBoard Board
-    x, y = getRandomMove(fromVertex.boardState)
-    for _,v := range fromVertex.outEdges {
-        if x == v.playX && y == v.playY {
-            return doRoutine( v.toVertex, toDepth )
-        }
-    }
 
+	var x, y uint8
+	var score uint8
+	var newBoard Board
 	err := "error"
+
 	for err != "" {
-        newBoard.Create(uint16(currentVertex.boardState.size))
+		x, y = getRandomMove(fromVertex.boardState)
+		for _, v := range fromVertex.outEdges {
+			if x == v.playX && y == v.playY {
+				return doRoutine(v.toVertex, toDepth+1)
+			}
+		}
+
+		newBoard.Create(uint16(currentVertex.boardState.size))
 		copy(newBoard.s, fromVertex.boardState.s)
 		score, err = newBoard.Play(fromVertex.turn, x, y)
 
-        if fromVertex.inEdge != nil {
-		    toCompare := fromVertex.inEdge.fromVertex
-		    if newBoard.IsEqual(toCompare.boardState) {
-			    err = "KO"
-		    }
-        }
-		x, y = getRandomMove(fromVertex.boardState)
+		if fromVertex.inEdge != nil {
+			toCompare := fromVertex.inEdge.fromVertex
+			if newBoard.IsEqual(toCompare.boardState) {
+				err = "KO"
+			}
+		}
 	}
 
 	newVertex := new(Vertex)
@@ -174,10 +174,9 @@ func doRoutine(fromVertex *Vertex, toDepth int) bool {
 	}
 	newVertex.plyDepth = fromVertex.plyDepth + 1
 
-	if newVertex.plyDepth > int(newBoard.size*newBoard.size/2) {
+	if newVertex.plyDepth > uint(newBoard.size*newBoard.size/2) {
 		_, _ = scoreBoard(newVertex)
 	}
-	//continue to new vertex
 	return doRoutine(newVertex, toDepth)
 }
 

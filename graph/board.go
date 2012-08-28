@@ -32,7 +32,7 @@ func (b *Board) place(c, x, y uint8) {
 
 func (b *Board) isTesuki(c, x, y uint8) bool {
 	var legalCheck Board
-    legalCheck.Create(uint16(b.size))
+	legalCheck.Create(uint16(b.size))
 	copy(legalCheck.s, b.s)
 	legalCheck.place(c, x, y)
 	xs := []uint8{x}
