@@ -13,7 +13,7 @@ type Vertex struct {
 	blackWins  uint16
 	whiteScore uint8
 	blackScore uint8
-	boardState Board
+	boardState *Board
 	turn       uint8
 
 	plyDepth uint
@@ -32,6 +32,7 @@ type Edge struct {
 func Initiate(boardSize uint8) {
 	rand.Seed(time.Now().Unix())
 	topVertex = new(Vertex)
+	topVertex.boardState = new(Board)
 	topVertex.boardState.Create(uint16(boardSize))
 	topVertex.turn = 1
 	topVertex.plyDepth = 0
@@ -73,7 +74,7 @@ func GetMove(c uint8) (x, y uint8) {
 	currentVertex.outEdges = []*Edge{bestMove}
 
 	board := currentVertex.boardState
-	currentVertex.boardState = Board{[]uint8{}, 0}
+	currentVertex.boardState = nil
 	board.Play(c, bestMove.playX, bestMove.playY)
 
 	currentVertex = bestMove.toVertex
@@ -88,14 +89,21 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	var newCurrent *Vertex = nil
 	for _, v := range currentVertex.outEdges {
 		if v.playX == x && v.playY == y {
+			currentVertex.outEdges = []*Edge{v}
+			board := currentVertex.boardState
+			currentVertex.boardState = nil
+			board.Play(c, x, y)
 			newCurrent = v.toVertex
+			newCurrent.boardState = board
 			break
 		}
 	}
 	if newCurrent == nil {
 		newCurrent = new(Vertex)
-		newCurrent.boardState.Create(uint16(currentVertex.boardState.size))
-		copy(newCurrent.boardState.s, currentVertex.boardState.s)
+		board := currentVertex.boardState
+		currentVertex.boardState = nil
+		newCurrent.boardState = board
+
 		score, _ := newCurrent.boardState.Play(c, x, y)
 
 		if c == 1 {
@@ -131,20 +139,22 @@ func createGraph() {
 
 func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	if toDepth == fromVertex.plyDepth {
+		fromVertex.boardState = nil
 		return true
 	}
 
 	var x, y uint8
 	var score uint8
-	var board Board
+	var board *Board
 	err := "error"
 
 	if fromVertex == currentVertex {
+		board = new(Board)
 		board.Create(uint16(currentVertex.boardState.size))
 		copy(board.s, fromVertex.boardState.s)
 	} else {
 		board = fromVertex.boardState
-		fromVertex.boardState = Board{[]uint8{}, 0}
+		fromVertex.boardState = nil
 	}
 
 	for err != "" {
@@ -197,7 +207,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	return doRoutine(newVertex, toDepth)
 }
 
-func getRandomMove(b Board) (x, y uint8) {
+func getRandomMove(b *Board) (x, y uint8) {
 	empty := b.GetEmpty()
 	i := rand.Intn(len(empty))
 	if i%2 == 0 { //index is x
