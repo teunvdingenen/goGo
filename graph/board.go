@@ -18,6 +18,10 @@ func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
 	return score, ""
 }
 
+func (b *Board) Remove(x, y uint8) {
+	b.place(0, x, y)
+}
+
 func (b *Board) Create(size uint16) {
 	b.s = make([]uint8, size*size)
 	b.size = uint8(size)

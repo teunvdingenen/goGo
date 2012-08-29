@@ -71,7 +71,13 @@ func GetMove(c uint8) (x, y uint8) {
 		panic("Unable to get a move from graph")
 	}
 	currentVertex.outEdges = []*Edge{bestMove}
+
+	board := currentVertex.boardState
+	currentVertex.boardState = Board{[]uint8{}, 0}
+	board.Play(c, bestMove.playX, bestMove.playY)
+
 	currentVertex = bestMove.toVertex
+	currentVertex.boardState = board
 	return bestMove.playX, bestMove.playY
 }
 
@@ -130,26 +136,37 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 
 	var x, y uint8
 	var score uint8
-	var newBoard Board
+	var board Board
 	err := "error"
 
+	if fromVertex == currentVertex {
+		board.Create(uint16(currentVertex.boardState.size))
+		copy(board.s, fromVertex.boardState.s)
+	} else {
+		board = fromVertex.boardState
+		fromVertex.boardState = Board{[]uint8{}, 0}
+	}
+
 	for err != "" {
-		x, y = getRandomMove(fromVertex.boardState)
+		x, y = getRandomMove(board)
 		for _, v := range fromVertex.outEdges {
 			if x == v.playX && y == v.playY {
-				return doRoutine(v.toVertex, toDepth+1)
+				_, _ = board.Play(fromVertex.turn, x, y)
+				v.toVertex.boardState = board
+				return doRoutine(v.toVertex, toDepth)
 			}
 		}
 
-		newBoard.Create(uint16(currentVertex.boardState.size))
-		copy(newBoard.s, fromVertex.boardState.s)
-		score, err = newBoard.Play(fromVertex.turn, x, y)
+		score, err = board.Play(fromVertex.turn, x, y)
 
-		if fromVertex.inEdge != nil {
-			toCompare := fromVertex.inEdge.fromVertex
-			if newBoard.IsEqual(toCompare.boardState) {
+		if fromVertex.plyDepth > 2 {
+			toCompare := fromVertex.inEdge.fromVertex.inEdge
+			if x == toCompare.playX && y == toCompare.playY {
 				err = "KO"
 			}
+		}
+		if err != "" {
+			board.Remove(x, y)
 		}
 	}
 
@@ -164,7 +181,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	fromVertex.outEdges = append(fromVertex.outEdges, newEdge)
 	newVertex.inEdge = newEdge
 
-	newVertex.boardState = newBoard
+	newVertex.boardState = board
 	if fromVertex.turn == 1 {
 		newVertex.turn = 2
 		newVertex.blackScore += score
@@ -174,7 +191,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	}
 	newVertex.plyDepth = fromVertex.plyDepth + 1
 
-	if newVertex.plyDepth > uint(newBoard.size*newBoard.size/2) {
+	if newVertex.plyDepth > uint(board.size*board.size/2) {
 		_, _ = scoreBoard(newVertex)
 	}
 	return doRoutine(newVertex, toDepth)
