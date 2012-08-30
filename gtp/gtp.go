@@ -60,15 +60,29 @@ func Listen() {
 
 func ToXY(s string) (uint8, uint8) {
 	s = strings.ToLower(s)
+    if s == "pass" {
+        return 254, 254
+    } else if s == "resign" {
+        return 255, 255
+    }
 	x := s[0]
 	x = x - 'a'
+    if x > 8 {
+        x -= 1
+    }
 	yt, _ := strconv.ParseUint(s[1:], 10, 8)
 	y := uint8(yt) - 1
 	return x, y
 }
 
 func FromXY(x, y uint8) string {
-	xstr := string(int(x + 'a'))
+    var xstr string
+    if x < 8 {
+        xstr = string(int(x + 'a'))
+    } else {
+        x += 1
+        xstr = string(int(x + 'a'))
+    }
 	return xstr + strconv.Itoa(int(y)+1)
 }
 

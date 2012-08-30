@@ -11,7 +11,7 @@ type Board struct {
 
 func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
     if b.isTesuki(color, x, y) {
-        return 0, "Illegal Move"
+        return 0, "Tesuki"
     }
     b.place(color, x, y)
     score = b.searchKills(color, x, y)

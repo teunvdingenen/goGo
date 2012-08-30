@@ -9,6 +9,8 @@ var komi float32
 
 var todo chan []uint8
 var running bool = true
+var hasPassed bool = false
+var hasResigned bool = false
 
 func main() {
     todo = make(chan []uint8, 10)
@@ -21,11 +23,25 @@ func watchTodo() {
         c := <-todo
         switch c[0] {
         case 0: //play
-            graph.UpdateCurrentVertex(c[1], c[2], c[3])
-            gtp.Respond("", true)
+            if c[1] == 254 && c[2] == 254 {
+                hasPassed = true
+                gtp.Respond("", true)
+            } else if c[1] == 255 && c[2] == 255 {
+                hasResigned = true
+                gtp.Respond("", true)
+            } else {
+                graph.UpdateCurrentVertex(c[1], c[2], c[3])
+                gtp.Respond("", true)
+            }
         case 1: //genmove
             x, y := graph.GetMove(c[1])
-            gtp.Respond(gtp.FromXY(x, y), true)
+            if x == 255 && y == 255 {
+                gtp.Respond("resign", true)
+            } else if hasPassed {
+                gtp.Respond("pass", true)
+            } else {
+                gtp.Respond(gtp.FromXY(x, y), true)
+            }
         case 2: //komi
             komi = float32(c[1]) * 0.5
             gtp.Respond("", true)

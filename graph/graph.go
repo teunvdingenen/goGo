@@ -40,8 +40,8 @@ func Initiate(boardSize uint8) {
 }
 
 func Reset() {
-    topVertex = nil
-    currentVertex = nil
+    topVertex.boardState.Create(uint16(topVertex.boardState.size))
+    currentVertex = topVertex
 }
 
 func GetMove(c uint8) (x, y uint8) {
@@ -69,7 +69,8 @@ func GetMove(c uint8) (x, y uint8) {
         panic("Unknown color in GetMove(..)")
     }
     if bestMove == nil {
-        panic("Unable to get a move from graph")
+        return 255, 255 
+        //panic("Unable to get a move from graph")
     }
     currentVertex.outEdges = []*Edge{bestMove}
 
@@ -131,7 +132,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
 func createGraph() {
     maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
     doUntil := time.Now().Add(15 * time.Second)
-    for time.Now().Second() != doUntil.Second() {
+    for time.Now().Before(doUntil) {
         toDepth := maxMoves/2 + currentVertex.plyDepth + 1
         _ = doRoutine(currentVertex, toDepth)
     }
@@ -157,6 +158,9 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
         fromVertex.boardState = nil
     }
 
+    possibilities := len(board.GetEmpty())
+    i := 0
+
     for err != "" {
         x, y = getRandomMove(board)
         for _, v := range fromVertex.outEdges {
@@ -177,6 +181,13 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
         }
         if err != "" {
             board.Remove(x, y)
+            i += 1
+        }
+        if possibilities == i {
+            if fromVertex != currentVertex {
+                fromVertex.boardState = nil
+            }
+            return false
         }
     }
 
