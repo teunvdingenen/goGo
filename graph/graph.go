@@ -2,7 +2,8 @@ package graph
 
 import (
 	"log"
-	"math/rand"
+	//	"math/rand"
+	"crypto/rand"
 	"time"
 )
 
@@ -36,7 +37,7 @@ type Edge struct {
 
 func Initiate(boardSize uint8, log *log.Logger) {
 	logger = log
-	rand.Seed(time.Now().Unix())
+	//	rand.Seed(time.Now().Unix())
 	topVertex = new(Vertex)
 	topVertex.boardState = new(Board)
 	topVertex.boardState.Create(uint16(boardSize))
@@ -144,10 +145,10 @@ func UpdateCurrentVertex(c, x, y uint8) {
 }
 
 func createGraph() {
-	maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
-	doUntil := time.Now().Add(15 * time.Second)
+	//	maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
+	doUntil := time.Now().Add(25 * time.Second)
 	for time.Now().Before(doUntil) {
-		toDepth := maxMoves/2 + currentVertex.plyDepth + 1
+		toDepth := 80 + currentVertex.plyDepth + 1
 		_ = doRoutine(currentVertex, toDepth)
 	}
 }
@@ -227,7 +228,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	newVertex.plyDepth = fromVertex.plyDepth + 1
 
 	if newVertex.plyDepth > uint(board.size*board.size/2) {
-		endBlack, endWhite := scoreBoard(newVertex)
+		endBlack, endWhite := scoreBoardOld(newVertex)
 		endBlack += newVertex.blackScore
 		endWhite += newVertex.whiteScore + uint8(komi-0.5)
 		if endBlack > endWhite {
@@ -249,7 +250,14 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 
 func getRandomMove(b *Board) (x, y uint8) {
 	empty := b.GetEmpty()
-	i := rand.Intn(len(empty))
+	//	i := rand.Intn(len(empty))
+	bs := make([]byte, 8)
+	_, _ = rand.Read(bs)
+	var i int = 0
+	for _, v := range bs {
+		i += int(v)
+	}
+	i = i % len(empty)
 	if i%2 == 0 { //index is x
 		x = empty[i]
 		y = empty[i+1]
@@ -266,26 +274,6 @@ func scoreBoard(v *Vertex) (scoreBlack, scoreWhite uint8) {
 	processedMatrix := make([]uint8, v.boardState.size*v.boardState.size)
 	b := v.boardState
 
-	for i, v := range processedMatrix {
-		if v == 1 {
-			continue
-		}
-		x, y := calcXY(i, b.size)
-		c := b.GetColor(x, y)
-		if c > 0 {
-			xs := []uint8{x}
-			ys := []uint8{y}
-			b.GetGroup(c, 0, xs, ys)
-			eyesFound := uint8(0)
-			if eyesFound >= 2 {
-				if c == 1 {
-					scoreBlack += eyesFound
-				} else if c == 2 {
-					scoreWhite += eyesFound
-				}
-			}
-		}
-	}
 	for i, v := range processedMatrix {
 		if v == 1 {
 			continue
@@ -342,7 +330,7 @@ func calcXY(index int, size uint8) (x, y uint8) {
 	return x, y
 }
 
-func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite int) {
+func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
 	b := v.boardState
 	empty := b.GetEmpty()
 
@@ -389,9 +377,9 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite int) {
 			}
 		}
 		if !found2Colors && adjecentColor == 1 {
-			scoreBlack += len(xs)
+			scoreBlack += uint8(len(xs))
 		} else if !found2Colors && adjecentColor == 2 {
-			scoreWhite += len(xs)
+			scoreWhite += uint8(len(xs))
 		}
 
 		for i := 0; i < len(empty); i += 2 {
@@ -400,19 +388,6 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite int) {
 			if IsPresentinGroup(emptyx, emptyy, xs, ys) {
 				empty = append(empty[:i], empty[i+2:]...)
 			}
-		}
-	}
-	if scoreBlack > scoreWhite {
-		vertex := v
-		for vertex != currentVertex {
-			vertex.blackWins += 1
-			vertex = vertex.inEdge.fromVertex
-		}
-	} else if scoreBlack < scoreWhite {
-		vertex := v
-		for vertex != currentVertex {
-			vertex.whiteWins += 1
-			vertex = vertex.inEdge.fromVertex
 		}
 	}
 	return scoreBlack, scoreWhite
