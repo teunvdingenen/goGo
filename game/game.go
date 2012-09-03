@@ -1,76 +1,81 @@
 package main
 
 import (
-    "goGo/graph"
-    "goGo/gtp"
+	"goGo/graph"
+	"goGo/gtp"
+	"log"
+	"os"
 )
 
-var komi float32
-
 var todo chan []uint8
+
+var fileLog *log.Logger
+
 var running bool = true
 var hasPassed bool = false
 var hasResigned bool = false
 
 func main() {
-    todo = make(chan []uint8, 10)
-    gtp.Start(todo)
-    watchTodo()
+	file, _ := os.Create("logfile")
+	fileLog = log.New(file, "", 0)
+	todo = make(chan []uint8, 10)
+	gtp.Start(todo)
+	watchTodo()
 }
 
 func watchTodo() {
-    for running {
-        c := <-todo
-        switch c[0] {
-        case 0: //play
-            if c[1] == 254 && c[2] == 254 {
-                hasPassed = true
-                gtp.Respond("", true)
-            } else if c[1] == 255 && c[2] == 255 {
-                hasResigned = true
-                gtp.Respond("", true)
-            } else {
-                graph.UpdateCurrentVertex(c[1], c[2], c[3])
-                gtp.Respond("", true)
-            }
-        case 1: //genmove
-            x, y := graph.GetMove(c[1])
-            if x == 255 && y == 255 {
-                gtp.Respond("resign", true)
-            } else if hasPassed {
-                gtp.Respond("pass", true)
-            } else {
-                gtp.Respond(gtp.FromXY(x, y), true)
-            }
-        case 2: //komi
-            komi = float32(c[1]) * 0.5
-            gtp.Respond("", true)
-        case 3: //boardsize
-            graph.Initiate(c[1])
-            gtp.Respond("", true)
-        case 4: //clearboard
-            graph.Reset()
-            gtp.Respond("", true)
-        case 5: //quit
-            //TODO make quit function
-            running = false
-            gtp.Respond("", true)
-        case 6: //protocol
-            gtp.Respond("2.0", true)
-        case 7: //name
-            gtp.Respond("goGo", true)
-        case 8: //version
-            gtp.Respond("0.1", true)
-        case 9: //list_commands
-            gtp.Respond(gtp.ListCommands(), true)
-        case 10: //known_commands
-            if c[1] == 0 {
-                gtp.Respond("false", true)
-            } else {
-                gtp.Respond("true", true)
-            }
-        default:
-            gtp.Respond("unknown command", false)
-        }
-    }
+	for running {
+		c := <-todo
+		switch c[0] {
+		case 0: //play
+			if c[1] == 254 && c[2] == 254 {
+				hasPassed = true
+				gtp.Respond("", true)
+			} else if c[1] == 255 && c[2] == 255 {
+				hasResigned = true
+				gtp.Respond("", true)
+			} else {
+				graph.UpdateCurrentVertex(c[1], c[2], c[3])
+				gtp.Respond("", true)
+			}
+		case 1: //genmove
+			x, y := graph.GetMove(c[1])
+			if x == 255 && y == 255 {
+				gtp.Respond("resign", true)
+			} else if hasPassed {
+				gtp.Respond("pass", true)
+			} else {
+				gtp.Respond(gtp.FromXY(x, y), true)
+			}
+		case 2: //komi
+			graph.SetKomi(float32(c[1]) * 0.5)
+			gtp.Respond("", true)
+		case 3: //boardsize
+			graph.Initiate(c[1], fileLog)
+			gtp.Respond("", true)
+		case 4: //clearboard
+			graph.Reset()
+			gtp.Respond("", true)
+		case 5: //quit
+			//TODO make quit function
+			running = false
+			gtp.Respond("", true)
+		case 6: //protocol
+			gtp.Respond("2.0", true)
+		case 7: //name
+			gtp.Respond("goGo", true)
+		case 8: //version
+			gtp.Respond("0.1", true)
+		case 9: //list_commands
+			gtp.Respond(gtp.ListCommands(), true)
+		case 10: //known_commands
+			if c[1] == 0 {
+				gtp.Respond("false", true)
+			} else {
+				gtp.Respond("true", true)
+			}
+		default:
+			gtp.Respond("unknown command", false)
+		}
+	}
 }
