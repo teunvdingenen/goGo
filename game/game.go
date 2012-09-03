@@ -18,7 +18,7 @@ var hasResigned bool = false
 func main() {
 	file, _ := os.Create("logfile")
 	fileLog = log.New(file, "", 0)
-	todo = make(chan []uint8, 10)
+	todo = make(chan []uint8, 32)
 	gtp.Start(todo)
 	watchTodo()
 }
@@ -28,10 +28,10 @@ func watchTodo() {
 		c := <-todo
 		switch c[0] {
 		case 0: //play
-			if c[1] == 254 && c[2] == 254 {
+			if c[2] == 254 && c[3] == 254 {
 				hasPassed = true
 				gtp.Respond("", true)
-			} else if c[1] == 255 && c[2] == 255 {
+			} else if c[2] == 255 && c[3] == 255 {
 				hasResigned = true
 				gtp.Respond("", true)
 			} else {
@@ -39,13 +39,15 @@ func watchTodo() {
 				gtp.Respond("", true)
 			}
 		case 1: //genmove
-			x, y := graph.GetMove(c[1])
-			if x == 255 && y == 255 {
-				gtp.Respond("resign", true)
-			} else if hasPassed {
+			if hasPassed {
 				gtp.Respond("pass", true)
 			} else {
-				gtp.Respond(gtp.FromXY(x, y), true)
+			    x, y := graph.GetMove(c[1])
+			    if x == 255 && y == 255 {
+				    gtp.Respond("resign", true)
+                } else {
+                    gtp.Respond(gtp.FromXY(x, y), true)
+                }
 			}
 		case 2: //komi
 			graph.SetKomi(float32(c[1]) * 0.5)

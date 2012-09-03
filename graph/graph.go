@@ -95,6 +95,8 @@ func GetMove(c uint8) (x, y uint8) {
 
 	currentVertex = bestMove.toVertex
 	currentVertex.boardState = board
+    logger.Printf("My Board is now:\n")
+    logger.Printf(board.tostr())
 	return bestMove.playX, bestMove.playY
 }
 
@@ -142,6 +144,8 @@ func UpdateCurrentVertex(c, x, y uint8) {
 		newCurrent.inEdge = newEdge
 	}
 	currentVertex = newCurrent
+    logger.Printf("My Board is now:\n")
+    logger.Printf(newCurrent.boardState.tostr())
 }
 
 func createGraph() {
