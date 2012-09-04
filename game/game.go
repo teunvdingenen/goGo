@@ -12,8 +12,8 @@ var todo chan []uint8
 var fileLog *log.Logger
 
 var running bool = true
-var hasPassed bool = false
-var hasResigned bool = false
+var hasPassed bool
+var hasResigned bool
 
 func main() {
 	file, _ := os.Create("logfile")
@@ -53,9 +53,13 @@ func watchTodo() {
 			graph.SetKomi(float32(c[1]) * 0.5)
 			gtp.Respond("", true)
 		case 3: //boardsize
+            hasPassed = false
+            hasResigned = false
 			graph.Initiate(c[1], fileLog)
 			gtp.Respond("", true)
 		case 4: //clearboard
+            hasPassed = false
+            hasResigned = false
 			graph.Reset()
 			gtp.Respond("", true)
 		case 5: //quit

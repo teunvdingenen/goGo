@@ -2,7 +2,6 @@ package graph
 
 import (
 	"log"
-	//	"math/rand"
 	"crypto/rand"
 	"time"
 )
@@ -37,7 +36,6 @@ type Edge struct {
 
 func Initiate(boardSize uint8, log *log.Logger) {
 	logger = log
-	//	rand.Seed(time.Now().Unix())
 	topVertex = new(Vertex)
 	topVertex.boardState = new(Board)
 	topVertex.boardState.Create(uint16(boardSize))
@@ -89,8 +87,9 @@ func GetMove(c uint8) (x, y uint8) {
 	}
 	currentVertex.outEdges = []*Edge{bestMove}
 
-	board := currentVertex.boardState
-	currentVertex.boardState = nil
+	board := new(Board)
+    board.Create(uint16(currentVertex.boardState.size))
+    copy(board.s, currentVertex.boardState.s)
 	board.Play(c, bestMove.playX, bestMove.playY)
 
 	currentVertex = bestMove.toVertex
@@ -108,8 +107,10 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	for _, v := range currentVertex.outEdges {
 		if v.playX == x && v.playY == y {
 			currentVertex.outEdges = []*Edge{v}
-			board := currentVertex.boardState
-			currentVertex.boardState = nil
+	        board := new(Board)
+            board.Create(uint16(currentVertex.boardState.size))
+            copy(board.s, currentVertex.boardState.s)
+
 			board.Play(c, x, y)
 			newCurrent = v.toVertex
 			newCurrent.boardState = board
@@ -118,8 +119,10 @@ func UpdateCurrentVertex(c, x, y uint8) {
 	}
 	if newCurrent == nil {
 		newCurrent = new(Vertex)
-		board := currentVertex.boardState
-		currentVertex.boardState = nil
+	    board := new(Board)
+        board.Create(uint16(currentVertex.boardState.size))
+        copy(board.s, currentVertex.boardState.s)
+
 		newCurrent.boardState = board
 
 		score, _ := newCurrent.boardState.Play(c, x, y)
@@ -150,7 +153,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
 
 func createGraph() {
 	//	maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
-	doUntil := time.Now().Add(25 * time.Second)
+	doUntil := time.Now().Add(10 * time.Second)
 	for time.Now().Before(doUntil) {
 		toDepth := 80 + currentVertex.plyDepth + 1
 		_ = doRoutine(currentVertex, toDepth)
@@ -159,7 +162,6 @@ func createGraph() {
 
 func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	if toDepth == fromVertex.plyDepth {
-		fromVertex.boardState = nil
 		return true
 	}
 
@@ -168,14 +170,9 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 	var board *Board
 	err := "error"
 
-	if fromVertex == currentVertex {
-		board = new(Board)
-		board.Create(uint16(currentVertex.boardState.size))
-		copy(board.s, fromVertex.boardState.s)
-	} else {
-		board = fromVertex.boardState
-		fromVertex.boardState = nil
-	}
+    board = new(Board)
+    board.Create(uint16(currentVertex.boardState.size))
+    copy(board.s, fromVertex.boardState.s)
 
 	possibilities := len(board.GetEmpty())
 	i := 0
@@ -193,8 +190,8 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 		score, err = board.Play(fromVertex.turn, x, y)
 
 		if fromVertex.plyDepth > 2 {
-			toCompare := fromVertex.inEdge.fromVertex.inEdge
-			if x == toCompare.playX && y == toCompare.playY {
+            koCompare := fromVertex.inEdge.fromVertex.boardState
+			if board.IsEqual(koCompare) {
 				err = "KO"
 			}
 		}
@@ -203,9 +200,6 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 			i += 1
 		}
 		if possibilities == i {
-			if fromVertex != currentVertex {
-				fromVertex.boardState = nil
-			}
 			return false
 		}
 	}
@@ -254,7 +248,6 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 
 func getRandomMove(b *Board) (x, y uint8) {
 	empty := b.GetEmpty()
-	//	i := rand.Intn(len(empty))
 	bs := make([]byte, 8)
 	_, _ = rand.Read(bs)
 	var i int = 0
@@ -384,7 +377,7 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
 			scoreBlack += uint8(len(xs))
 		} else if !found2Colors && adjecentColor == 2 {
 			scoreWhite += uint8(len(xs))
-		}
+		} 
 
 		for i := 0; i < len(empty); i += 2 {
 			emptyx := empty[i]

@@ -46,7 +46,7 @@ func (b *Board) isTesuki(c, x, y uint8) bool {
 	return !legalCheck.hasFreedom(0, xs, ys)
 }
 
-func (b *Board) IsEqual(c Board) bool {
+func (b *Board) IsEqual(c *Board) bool {
 	for i, v := range b.s {
 		if v != c.s[i] {
 			return false
