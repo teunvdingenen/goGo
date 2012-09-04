@@ -107,13 +107,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
     for _, v := range currentVertex.outEdges {
         if v.playX == x && v.playY == y {
             currentVertex.outEdges = []*Edge{v}
-            board := new(Board)
-            board.Create(uint16(currentVertex.boardState.size))
-            copy(board.s, currentVertex.boardState.s)
-
-            board.Play(c, x, y)
             newCurrent = v.toVertex
-            newCurrent.boardState = board
             break
         }
     }
@@ -153,7 +147,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
 
 func createGraph() {
     //  maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
-    doUntil := time.Now().Add(10 * time.Second)
+    doUntil := time.Now().Add(20 * time.Second)
     for time.Now().Before(doUntil) {
         toDepth := 80 + currentVertex.plyDepth + 1
         _ = doRoutine(currentVertex, toDepth)
@@ -387,5 +381,8 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             }
         }
     }
+    logger.Printf("Scored Board (b,w): (%d,%d)\n", scoreBlack, scoreWhite)
+    logger.Printf(b.tostr())
+
     return scoreBlack, scoreWhite
 }

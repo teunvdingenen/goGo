@@ -42,7 +42,7 @@ func (b *Board) isTesuki(c, x, y uint8) bool {
     legalCheck.searchKills(c, x, y)
     xs := []uint8{x}
     ys := []uint8{y}
-    _ = legalCheck.GetGroup(c, 0, xs, ys)
+    xs, ys = legalCheck.GetGroup(c, 0, xs, ys)
     return !legalCheck.hasFreedom(0, xs, ys)
 }
 
@@ -97,7 +97,7 @@ func (b *Board) GetEmpty() (empty []uint8) {
     return empty
 }
 
-func (b *Board) GetGroup(c, i uint8, xs, ys []uint8) bool {
+func (b *Board) GetGroup(c, i uint8, xs, ys []uint8) (xg, yg []uint8) {
     xa, xb, ya, yb := GetAdjecent(xs[i], ys[i])
 
     if xa < b.size && b.GetColor(xa, ys[i]) == c && !IsPresentinGroup(xa, ys[i], xs, ys) {
@@ -118,7 +118,7 @@ func (b *Board) GetGroup(c, i uint8, xs, ys []uint8) bool {
     }
     i += 1
     if len(xs) == int(i) {
-        return true
+        return xs, ys
     }
     return b.GetGroup(c, i, xs, ys)
 }
@@ -151,7 +151,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
     if xa < b.size && b.GetColor(xa, y) == opponent {
         xs := []uint8{xa}
         ys := []uint8{y}
-        _ = b.GetGroup(opponent, 0, xs, ys)
+        xs, ys = b.GetGroup(opponent, 0, xs, ys)
         if !b.hasFreedom(0, xs, ys) {
             score += b.kill(xs, ys)
         }
@@ -159,7 +159,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
     if xb < b.size && b.GetColor(xb, y) == opponent {
         xs := []uint8{xb}
         ys := []uint8{y}
-        _ = b.GetGroup(opponent, 0, xs, ys)
+        xs, ys = b.GetGroup(opponent, 0, xs, ys)
         if !b.hasFreedom(0, xs, ys) {
             score += b.kill(xs, ys)
         }
@@ -167,7 +167,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
     if ya < b.size && b.GetColor(x, ya) == opponent {
         xs := []uint8{x}
         ys := []uint8{ya}
-        _ = b.GetGroup(opponent, 0, xs, ys)
+        xs, ys = b.GetGroup(opponent, 0, xs, ys)
         if !b.hasFreedom(0, xs, ys) {
             score += b.kill(xs, ys)
         }
@@ -175,7 +175,7 @@ func (b *Board) searchKills(color, x, y uint8) uint8 {
     if yb < b.size && b.GetColor(x, yb) == opponent {
         xs := []uint8{x}
         ys := []uint8{yb}
-        _ = b.GetGroup(opponent, 0, xs, ys)
+        xs, ys = b.GetGroup(opponent, 0, xs, ys)
         if !b.hasFreedom(0, xs, ys) {
             score += b.kill(xs, ys)
         }
