@@ -1,3 +1,4 @@
+//Package main links together the graph and gtp
 package main
 
 import (
@@ -15,6 +16,8 @@ var running bool = true
 var hasPassed bool
 var hasResigned bool
 
+//The program starts at main, this creates the channel a log file and sets up a channel
+//for the gtp reader
 func main() {
     file, _ := os.Create("logfile")
     fileLog = log.New(file, "", 0)
@@ -23,6 +26,7 @@ func main() {
     watchTodo()
 }
 
+//watchTodo listens to the channel that the gtp package fills. Here the graph functions are called
 func watchTodo() {
     for running {
         c := <-todo

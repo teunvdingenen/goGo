@@ -1,5 +1,4 @@
-/* 
-  Commands format: [id] command_name arguments\n
+/*Commands format: [id] command_name arguments\n
     id = optional int
 
    Required commands:                       TODO
@@ -35,7 +34,6 @@
                 ?[id] error_message
         id may be omitted if and only if it was omited in command
 */
-
 package gtp
 
 import (
@@ -49,6 +47,7 @@ import (
 var commands = []string{"protocol_version", "name", "version", "known_commands", "list_commands", "quit", "boardsize", "clear_board", "komi", "play", "genmove"}
 var received chan []uint8
 
+//Listen is run in a seperate goroutine and continuesly listens to std.in for new commands
 func Listen() {
 	listener := bufio.NewReader(os.Stdin)
 	for {
@@ -58,6 +57,7 @@ func Listen() {
 	}
 }
 
+//Translates a coordinate in string form (ie D3) to x y positions (3,2) for usage in a matrix
 func ToXY(s string) (uint8, uint8) {
 	s = strings.ToLower(s)
 	if s == "pass" {
@@ -75,6 +75,7 @@ func ToXY(s string) (uint8, uint8) {
 	return x, y
 }
 
+//Translates x,y positions to a coordinate string like D3
 func FromXY(x, y uint8) string {
 	var xstr string
 	if x < 8 {
@@ -86,6 +87,7 @@ func FromXY(x, y uint8) string {
 	return xstr + strconv.Itoa(int(y)+1)
 }
 
+//Translates a color string (black, white) to 1, 2
 func FromColorStr(s string) uint8 {
 	var retValue uint8
 	if s[0] == 'w' || s[0] == 'W' {
@@ -98,6 +100,7 @@ func FromColorStr(s string) uint8 {
 	return retValue
 }
 
+//If c is 1 returns b, if c is 2 returns w
 func ToColorStr(c uint8) string {
 	var retValue string
 	if c == 2 {
@@ -108,6 +111,7 @@ func ToColorStr(c uint8) string {
 	return retValue
 }
 
+//Adds a command received in std.in to the command channel
 func add(s string) {
 	arg := make([]uint8, 4)
 	s = strings.Trim(s, "\n")
@@ -159,12 +163,14 @@ func add(s string) {
 	received <- arg
 }
 
+//Starts the gtp engine
 func Start(todo chan []uint8) int {
 	received = todo
 	go Listen()
 	return 0
 }
 
+//Responds to the server according to the gtp protocol
 func Respond(s string, succes bool) {
 	var b byte
 	if succes {
@@ -175,6 +181,7 @@ func Respond(s string, succes bool) {
 	fmt.Printf("%c %s\n\n", b, s)
 }
 
+//Returns a string of all known commands
 func ListCommands() string {
 	return strings.Join(commands, "\n")
 }

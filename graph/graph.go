@@ -1,3 +1,4 @@
+//The Graph package hold all functions of the MCTS algorithm
 package graph
 
 import (
@@ -13,6 +14,7 @@ var komi float32
 
 var logger *log.Logger
 
+//The Vertex structure holds a boardState and a score up to that point in the game
 type Vertex struct {
     whiteWins  uint16
     blackWins  uint16
@@ -26,6 +28,7 @@ type Vertex struct {
     inEdge   *Edge
 }
 
+//The Edge structure holds a play and links together two Vertices
 type Edge struct {
     playX uint8
     playY uint8
@@ -34,6 +37,7 @@ type Edge struct {
     toVertex   *Vertex
 }
 
+//Initiate sets up the first Vertex and links the logfile to this package
 func Initiate(boardSize uint8, log *log.Logger) {
     logger = log
     topVertex = new(Vertex)
@@ -44,15 +48,19 @@ func Initiate(boardSize uint8, log *log.Logger) {
     currentVertex = topVertex
 }
 
+//setKomi informes the graph package of the komi used in the match
 func SetKomi(k float32) {
     komi = k
 }
 
+//The Reset function removes all vertices up till now so that a new game can be started
 func Reset() {
     topVertex.boardState.Create(uint16(topVertex.boardState.size))
     currentVertex = topVertex
 }
 
+//GetMove is called when the program should generate a move. It takes either a 1 or a 2
+//as argument which stands for the generation of a black or white move
 func GetMove(c uint8) (x, y uint8) {
     createGraph()
     var bestMove *Edge = nil
@@ -99,6 +107,8 @@ func GetMove(c uint8) (x, y uint8) {
     return bestMove.playX, bestMove.playY
 }
 
+//When a human does a play, the graph needs to be updated to the real state of the board.
+//This function updates the currentVertex to that play, or creates it if it does not exist yet
 func UpdateCurrentVertex(c, x, y uint8) {
     if c != currentVertex.turn {
         panic("Updating graph to wrong color's move")
@@ -145,15 +155,16 @@ func UpdateCurrentVertex(c, x, y uint8) {
     logger.Printf(newCurrent.boardState.tostr())
 }
 
+//The function createGraph is run before a move is selected. 
 func createGraph() {
-    //  maxMoves := uint(currentVertex.boardState.size * currentVertex.boardState.size)
+    toDepth := uint(currentVertex.boardState.size * currentVertex.boardState.size) / 2 + currentVertex.plyDepth + 1
     doUntil := time.Now().Add(20 * time.Second)
     for time.Now().Before(doUntil) {
-        toDepth := 80 + currentVertex.plyDepth + 1
         _ = doRoutine(currentVertex, toDepth)
     }
 }
 
+//doRoutine expands the graph downwards to a certain plydepth. This function is called recursively
 func doRoutine(fromVertex *Vertex, toDepth uint) bool {
     if toDepth == fromVertex.plyDepth {
         return true
@@ -240,12 +251,13 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
     return doRoutine(newVertex, toDepth)
 }
 
+//Get random move implements the crypt/rand library to get a truely random move
 func getRandomMove(b *Board) (x, y uint8) {
     empty := b.GetEmpty()
     bs := make([]byte, 8)
     _, _ = rand.Read(bs)
-    var i int = 0
-    for _, v := range bs {
+    i:=0
+    for _,v := range bs {
         i += int(v)
     }
     i = i % len(empty)
@@ -259,6 +271,8 @@ func getRandomMove(b *Board) (x, y uint8) {
     return x, y
 }
 
+//scoreBoard attempts to get the score of a game at vertex v. This is only done after
+//a certain amount of moves have passed. This function is not called in the current configuration
 func scoreBoard(v *Vertex) (scoreBlack, scoreWhite uint8) {
     scoreBlack = 0
     scoreWhite = 0
@@ -314,6 +328,7 @@ func scoreBoard(v *Vertex) (scoreBlack, scoreWhite uint8) {
     return scoreBlack, scoreWhite
 }
 
+//Translates an index to the boardcoordinates it stands for
 func calcXY(index int, size uint8) (x, y uint8) {
     i := uint8(index)
     y = i / size
@@ -321,6 +336,8 @@ func calcXY(index int, size uint8) (x, y uint8) {
     return x, y
 }
 
+//This function scores a board, only counting the amount of empty fields that are
+//surrounding by a single color.
 func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
     b := v.boardState
     empty := b.GetEmpty()
