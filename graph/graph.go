@@ -5,6 +5,7 @@ import (
     "crypto/rand"
     "log"
     "time"
+    "math"
 )
 
 var topVertex *Vertex
@@ -22,6 +23,7 @@ type Vertex struct {
     blackScore uint8
     boardState *Board
     turn       uint8
+    nrVisits   uint16
 
     plyDepth uint
     outEdges []*Edge
@@ -45,6 +47,7 @@ func Initiate(boardSize uint8, log *log.Logger) {
     topVertex.boardState.Create(uint16(boardSize))
     topVertex.turn = 1
     topVertex.plyDepth = 0
+    topVertex.nrVisits = 0
     currentVertex = topVertex
 }
 
@@ -64,26 +67,22 @@ func Reset() {
 func GetMove(c uint8) (x, y uint8) {
     createGraph()
     var bestMove *Edge = nil
-    var biggestDiff uint16 = 0
+    var bestAvg float64 = 0
     if c != currentVertex.turn {
         panic("Trying to getmove for wrong color")
     }
     if c == 1 {
         for _, v := range currentVertex.outEdges {
-            if v.toVertex.blackWins > v.toVertex.whiteWins {
-                if diff := v.toVertex.blackWins - v.toVertex.whiteWins; diff > biggestDiff {
+            if avg := float64(v.toVertex.blackWins) / float64(v.toVertex.blackWins + v.toVertex.whiteWins); avg > bestAvg {
                     bestMove = v
-                    biggestDiff = diff
-                }
+                    bestAvg = avg
             }
         }
     } else if c == 2 {
         for _, v := range currentVertex.outEdges {
-            if v.toVertex.blackWins < v.toVertex.whiteWins {
-                if diff := v.toVertex.whiteWins - v.toVertex.blackWins; diff > biggestDiff {
+            if avg := float64(v.toVertex.whiteWins) / float64(v.toVertex.blackWins + v.toVertex.whiteWins); avg > bestAvg {
                     bestMove = v
-                    biggestDiff = diff
-                }
+                    bestAvg = avg
             }
         }
     } else {
@@ -123,6 +122,7 @@ func UpdateCurrentVertex(c, x, y uint8) {
     }
     if newCurrent == nil {
         newCurrent = new(Vertex)
+        newCurrent.nrVisits = 0
         board := new(Board)
         board.Create(uint16(currentVertex.boardState.size))
         copy(board.s, currentVertex.boardState.s)
@@ -157,17 +157,66 @@ func UpdateCurrentVertex(c, x, y uint8) {
 
 //The function createGraph is run before a move is selected. 
 func createGraph() {
-    toDepth := uint(currentVertex.boardState.size * currentVertex.boardState.size) / 2 + currentVertex.plyDepth + 1
+//    toDepth := uint(currentVertex.boardState.size * currentVertex.boardState.size) / 2 + currentVertex.plyDepth + 1
+    toDepth := 60 + currentVertex.plyDepth + 1
     doUntil := time.Now().Add(20 * time.Second)
     for time.Now().Before(doUntil) {
         _ = doRoutine(currentVertex, toDepth)
     }
 }
 
+//Find vertex with most prospect. Function is: k <- max(i<-I) ( v(i) + C * sqrt(ln(n(p)) / n(i) ) )
+func UCTfunc(fromVertex *Vertex) *Edge {
+    k_high := float64(0)
+    var bigProspect *Edge = nil
+    vi := float64(0)
+    vi_save := float64(0)
+    np := float64(fromVertex.nrVisits)
+    for _,v := range fromVertex.outEdges {
+        nrG := float64(v.toVertex.blackWins + v.toVertex.whiteWins)
+        if fromVertex.turn == 1 {
+            vi = float64(float64(v.toVertex.blackWins) / nrG)
+        } else {
+            vi = float64(float64(v.toVertex.whiteWins) / nrG)
+        }
+        ni := float64(v.toVertex.nrVisits)
+        k := vi + 3 * math.Sqrt(math.Log(np) / ni )
+        if k > k_high {
+            k_high = k
+            bigProspect = v
+            vi_save = vi
+        }
+    }
+    logger.Printf("Prospect is: %d, %d. k = %f, v(i) = %f\n", bigProspect.playX, bigProspect.playY, k_high, vi_save)
+    return bigProspect
+}
+
 //doRoutine expands the graph downwards to a certain plydepth. This function is called recursively
 func doRoutine(fromVertex *Vertex, toDepth uint) bool {
     if toDepth == fromVertex.plyDepth {
+        endBlack, endWhite := scoreBoardOld(fromVertex)
+        endBlack += fromVertex.blackScore
+        endWhite += fromVertex.whiteScore + uint8(komi-0.5)
+        if endBlack > endWhite {
+            vertex := fromVertex
+            for vertex != currentVertex {
+                vertex.blackWins += 1
+                vertex = vertex.inEdge.fromVertex
+            }
+        } else if endBlack <= endWhite {
+            vertex := fromVertex
+            for vertex != currentVertex {
+                vertex.whiteWins += 1
+                vertex = vertex.inEdge.fromVertex
+            }
+        }
         return true
+    }
+    fromVertex.nrVisits += 1
+
+    if fromVertex.nrVisits > 10000 {
+        expand := UCTfunc(fromVertex)
+        return doRoutine(expand.toVertex, toDepth)
     }
 
     var x, y uint8
@@ -186,8 +235,8 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
         x, y = getRandomMove(board)
         for _, v := range fromVertex.outEdges {
             if x == v.playX && y == v.playY {
-                _, _ = board.Play(fromVertex.turn, x, y)
-                v.toVertex.boardState = board
+//                _, _ = board.Play(fromVertex.turn, x, y)
+//                v.toVertex.boardState = board
                 return doRoutine(v.toVertex, toDepth)
             }
         }
@@ -210,6 +259,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
     }
 
     newVertex := new(Vertex)
+    newVertex.nrVisits = 0
 
     newEdge := new(Edge)
     newEdge.playX = x
@@ -229,25 +279,6 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
         newVertex.whiteScore += score
     }
     newVertex.plyDepth = fromVertex.plyDepth + 1
-
-    if newVertex.plyDepth > uint(board.size*board.size/2) {
-        endBlack, endWhite := scoreBoardOld(newVertex)
-        endBlack += newVertex.blackScore
-        endWhite += newVertex.whiteScore + uint8(komi-0.5)
-        if endBlack > endWhite {
-            vertex := newVertex
-            for vertex != currentVertex {
-                vertex.blackWins += 1
-                vertex = vertex.inEdge.fromVertex
-            }
-        } else if endBlack <= endWhite {
-            vertex := newVertex
-            for vertex != currentVertex {
-                vertex.whiteWins += 1
-                vertex = vertex.inEdge.fromVertex
-            }
-        }
-    }
     return doRoutine(newVertex, toDepth)
 }
 
@@ -283,43 +314,52 @@ func scoreBoard(v *Vertex) (scoreBlack, scoreWhite uint8) {
         if v == 1 {
             continue
         }
-        x, y := calcXY(i, b.size)
-        if b.GetColor(x, y) == 0 {
-            xa, xb, ya, yb := GetAdjecent(x, y)
-            adjecentColor := uint8(0)
-            found2Colors := false
-            if xa < b.size && b.GetColor(xa, y) != adjecentColor {
-                if adjecentColor == 0 {
-                    adjecentColor = b.GetColor(xa, y)
-                } else {
-                    found2Colors = true
+        xFirst, yFirst := calcXY(i, b.size)
+        if c := b.GetColor(xFirst, yFirst); c != 0 {
+            xs := []uint8{xFirst}
+            ys := []uint8{yFirst}
+            xs, ys = b.GetGroup(c, 0, xs, ys)
+            var lowx uint8 = 255
+            var lowy uint8 = 255
+            var highx uint8 = 0
+            var highy uint8 = 0
+            for i,v := range xs {
+                processedMatrix[v+ys[i]*b.size] = 1
+                if v < lowx {
+                    lowx = v
+                } else if v > highx {
+                    highx = v
+                }
+                if ys[i] < lowy {
+                    lowy = ys[i]
+                } else if ys[i] > highy {
+                    highy = ys[i]
                 }
             }
-            if xb < b.size && b.GetColor(xb, y) != adjecentColor {
-                if adjecentColor == 0 {
-                    adjecentColor = b.GetColor(xb, y)
-                } else {
-                    found2Colors = true
+            var eyes uint8 = 0
+            for y := lowy; y<highy; y++ {
+                for x := lowx; x<highx; x++ {
+                    if b.GetColor(x, y) == 0 {
+                        xa,xb,ya,yb := GetAdjecent(x,y)
+                        if xa > b.size || IsPresentinGroup(xa, y, xs, ys) {
+                            if xb > b.size || IsPresentinGroup(xb, y, xs, ys) {
+                                if ya > b.size || IsPresentinGroup(x, ya, xs, ys) {
+                                    if yb > b.size || IsPresentinGroup(x, yb, xs, ys) {
+                                        processedMatrix[x+y*b.size] = 1
+                                        eyes += 1
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            if ya < b.size && b.GetColor(x, ya) != adjecentColor {
-                if adjecentColor == 0 {
-                    adjecentColor = b.GetColor(x, ya)
-                } else {
-                    found2Colors = true
+            if eyes >= 2 {
+                if c == 1 {
+                    scoreBlack += eyes
+                } else if c == 2 {
+                    scoreWhite += eyes
                 }
-            }
-            if yb < b.size && b.GetColor(x, yb) != adjecentColor {
-                if adjecentColor == 0 {
-                    adjecentColor = b.GetColor(x, yb)
-                } else {
-                    found2Colors = true
-                }
-            }
-            if !found2Colors && adjecentColor == 1 {
-                scoreBlack += 1
-            } else if !found2Colors && adjecentColor == 2 {
-                scoreWhite += 1
             }
         }
     }

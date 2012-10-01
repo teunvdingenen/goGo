@@ -11,10 +11,10 @@ type Board struct {
 }
 
 //The Play function plays a move for color at x,y. Although it does check
-//for tesuki (suicide) it does not follow the KO rule
+//for jisatsu (suicide) it does not follow the KO rule
 func (b *Board) Play(color, x, y uint8) (score uint8, err string) {
-    if b.isTesuki(color, x, y) {
-        return 0, "Tesuki"
+    if b.isJisatsu(color, x, y) {
+        return 0, "Jisatsu"
     }
     b.place(color, x, y)
     score = b.searchKills(color, x, y)
@@ -41,7 +41,7 @@ func (b *Board) place(c, x, y uint8) {
 }
 
 //Checks whether a play is a suicide move
-func (b *Board) isTesuki(c, x, y uint8) bool {
+func (b *Board) isJisatsu(c, x, y uint8) bool {
     var legalCheck Board
     legalCheck.Create(uint16(b.size))
     copy(legalCheck.s, b.s)
