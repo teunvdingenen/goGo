@@ -11,6 +11,8 @@ import (
 var topVertex *Vertex
 var currentVertex *Vertex
 
+var nrVertex uint16
+
 var komi float32
 
 var logger *log.Logger
@@ -93,16 +95,11 @@ func GetMove(c uint8) (x, y uint8) {
         //panic("Unable to get a move from graph")
     }
     currentVertex.outEdges = []*Edge{bestMove}
-
-    board := new(Board)
-    board.Create(uint16(currentVertex.boardState.size))
-    copy(board.s, currentVertex.boardState.s)
-    board.Play(c, bestMove.playX, bestMove.playY)
-
     currentVertex = bestMove.toVertex
-    currentVertex.boardState = board
-    logger.Printf("My Board is now:\n")
-    logger.Printf(board.tostr())
+
+    //logger.Printf("My Board is now:\n")
+    //logger.Printf(currentVertex.boardState.tostr())
+
     return bestMove.playX, bestMove.playY
 }
 
@@ -151,8 +148,8 @@ func UpdateCurrentVertex(c, x, y uint8) {
         newCurrent.inEdge = newEdge
     }
     currentVertex = newCurrent
-    logger.Printf("My Board is now:\n")
-    logger.Printf(newCurrent.boardState.tostr())
+    //logger.Printf("My Board is now:\n")
+    //logger.Printf(newCurrent.boardState.tostr())
 }
 
 //The function createGraph is run before a move is selected. 
@@ -160,9 +157,13 @@ func createGraph() {
 //    toDepth := uint(currentVertex.boardState.size * currentVertex.boardState.size) / 2 + currentVertex.plyDepth + 1
     toDepth := 60 + currentVertex.plyDepth + 1
     doUntil := time.Now().Add(20 * time.Second)
+    nrVertex = 1
+    routines := 0
     for time.Now().Before(doUntil) {
         _ = doRoutine(currentVertex, toDepth)
+        routines += 1
     }
+    logger.Printf("Created %d Vertices in %d routines, below plyDepth: %d", nrVertex, routines, currentVertex.plyDepth)
 }
 
 //Find vertex with most prospect. Function is: k <- max(i<-I) ( v(i) + C * sqrt(ln(n(p)) / n(i) ) )
@@ -170,7 +171,7 @@ func UCTfunc(fromVertex *Vertex) *Edge {
     k_high := float64(0)
     var bigProspect *Edge = nil
     vi := float64(0)
-    vi_save := float64(0)
+    //vi_save := float64(0)
     np := float64(fromVertex.nrVisits)
     for _,v := range fromVertex.outEdges {
         nrG := float64(v.toVertex.blackWins + v.toVertex.whiteWins)
@@ -184,10 +185,10 @@ func UCTfunc(fromVertex *Vertex) *Edge {
         if k > k_high {
             k_high = k
             bigProspect = v
-            vi_save = vi
+            //vi_save = vi
         }
     }
-    logger.Printf("Prospect is: %d, %d. k = %f, v(i) = %f\n", bigProspect.playX, bigProspect.playY, k_high, vi_save)
+    //logger.Printf("Prospect is: %d, %d. k = %f, v(i) = %f\n", bigProspect.playX, bigProspect.playY, k_high, vi_save)
     return bigProspect
 }
 
@@ -228,7 +229,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
     board.Create(uint16(currentVertex.boardState.size))
     copy(board.s, fromVertex.boardState.s)
 
-    possibilities := len(board.GetEmpty())
+    possibilities := len(board.GetEmpty()) * 2
     i := 0
 
     for err != "" {
@@ -247,12 +248,10 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
             koCompare := fromVertex.inEdge.fromVertex.boardState
             if board.IsEqual(koCompare) {
                 err = "KO"
+                board.Remove(x, y)
             }
         }
-        if err != "" {
-            board.Remove(x, y)
-            i += 1
-        }
+        i += 1
         if possibilities == i {
             return false
         }
@@ -260,6 +259,7 @@ func doRoutine(fromVertex *Vertex, toDepth uint) bool {
 
     newVertex := new(Vertex)
     newVertex.nrVisits = 0
+    nrVertex += 1
 
     newEdge := new(Edge)
     newEdge.playX = x
@@ -363,8 +363,8 @@ func scoreBoard(v *Vertex) (scoreBlack, scoreWhite uint8) {
             }
         }
     }
-    logger.Printf("Scored Board (b,w): (%d,%d)\n", scoreBlack, scoreWhite)
-    logger.Printf(b.tostr())
+    //logger.Printf("Scored Board (b,w): (%d,%d)\n", scoreBlack, scoreWhite)
+    //logger.Printf(b.tostr())
     return scoreBlack, scoreWhite
 }
 
@@ -394,7 +394,7 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             if xa < b.size && b.GetColor(xa, ys[i]) != adjecentColor {
                 if adjecentColor == 0 {
                     adjecentColor = b.GetColor(xa, ys[i])
-                } else {
+                } else if b.GetColor(xa, ys[i]) != 0 {
                     found2Colors = true
                     break
                 }
@@ -402,7 +402,7 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             if xb < b.size && b.GetColor(xb, ys[i]) != adjecentColor {
                 if adjecentColor == 0 {
                     adjecentColor = b.GetColor(xb, ys[i])
-                } else {
+                } else if b.GetColor(xb, ys[i]) != 0 {
                     found2Colors = true
                     break
                 }
@@ -410,7 +410,7 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             if ya < b.size && b.GetColor(x, ya) != adjecentColor {
                 if adjecentColor == 0 {
                     adjecentColor = b.GetColor(x, ya)
-                } else {
+                } else if b.GetColor(x, ya) != 0 {
                     found2Colors = true
                     break
                 }
@@ -418,7 +418,7 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             if yb < b.size && b.GetColor(x, yb) != adjecentColor {
                 if adjecentColor == 0 {
                     adjecentColor = b.GetColor(x, yb)
-                } else {
+                } else if b.GetColor(x, yb) != 0 {
                     found2Colors = true
                     break
                 }
@@ -438,8 +438,8 @@ func scoreBoardOld(v *Vertex) (scoreBlack, scoreWhite uint8) {
             }
         }
     }
-    logger.Printf("Scored Board (b,w): (%d,%d)\n", scoreBlack, scoreWhite)
-    logger.Printf(b.tostr())
+    //logger.Printf("Scored Board (b,w): (%d,%d)\n", scoreBlack, scoreWhite)
+    //logger.Printf(b.tostr())
 
     return scoreBlack, scoreWhite
 }
